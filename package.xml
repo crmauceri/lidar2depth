@@ -59,6 +59,23 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
 
+  <!--pcl dependancies -->
+  <depend>pcl_conversions</depend>
+  <depend>pcl_ros</depend>
+  <depend>sensor_msgs</depend>
+  <build_depend>libpcl-all-dev</build_depend>
+  <exec_depend>libpcl-all</exec_depend>
+
+  <!--image transport dependancies -->
+  <depend>image_transport</depend>
+  <depend>cv_bridge</depend>
+
+  <!--image geometry dependancies -->
+  <depend>image_geometry</depend>
+
+  <!-- tf2 dependancies -->
+  <depend>tf2_ros</depend>
+  <depend>tf2_sensor_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
