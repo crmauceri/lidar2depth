@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ros_lidar2depth)
+project(lidar2depth)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -112,7 +112,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES ros_lidar2depth
+#  LIBRARIES lidar2depth
 #  CATKIN_DEPENDS roscpp rospy std_msgs pcl_conversions pcl_ros sensor_msgs image_transport cv_bridge image_geometry tf2_ros tf2_sensor_msgs
 #  DEPENDS system_lib
 )
@@ -130,7 +130,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/ros_lidar2depth.cpp
+#   src/${PROJECT_NAME}/lidar2depth.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -141,9 +141,8 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/ros_lidar2depth_node.cpp)
-add_executable(example src/example.cpp)
-target_link_libraries(example ${catkin_LIBRARIES})
+add_executable(${PROJECT_NAME}_node src/lidar2depth.cpp)
+target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -153,7 +152,7 @@ target_link_libraries(example ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
@@ -200,7 +199,7 @@ target_link_libraries(example ${catkin_LIBRARIES})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ros_lidar2depth.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lidar2depth.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
@@ -211,3 +210,7 @@ target_link_libraries(example ${catkin_LIBRARIES})
 catkin_install_python(PROGRAMS scripts/talker.py scripts/listener.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+add_executable(vision_node src/syncronizer.cpp)
+target_link_libraries(vision_node ${catkin_LIBRARIES})
+add_dependencies(vision_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

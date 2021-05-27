@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>ros_lidar2depth</name>
+  <name>lidar2depth</name>
   <version>0.0.0</version>
-  <description>The ros_lidar2depth package projects a lidar point cloud to the image plane of a camera model. Each pixel value represents the distance from the camera plane to that point.</description>
+  <description>The lidar2depth package projects a lidar point cloud to the image plane of a camera model.
+    Each pixel value represents the distance from the camera plane to that point.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
