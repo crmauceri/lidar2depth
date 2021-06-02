@@ -104,6 +104,8 @@ PointCloud::Ptr fibonacci_sphere(int samples, cv::Point3d center, double radius)
 */
 class Lidar2Depth
 {
+    bool visualize;
+
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
@@ -180,18 +182,23 @@ public:
                 if(depth > max) max = depth;
 
                 image.at<ushort>((int)uv.y, (int)uv.x) = depth;
-//                //Make lidar points bigger for visualization
-//                for(int j=-1; j<2; j++){
-//                    image.at<ushort>((int)uv.y+j, (int)uv.x) = depth;
-//                    image.at<ushort>((int)uv.y, (int)uv.x+j) = depth;
-//                    image.at<ushort>((int)uv.y+j, (int)uv.x+j) = depth;
-//                }
+
+                //Make lidar points bigger for visualization
+                if(visualize){
+                    for(int j=-1; j<2; j++){
+                        image.at<ushort>((int)uv.y+j, (int)uv.x) = depth;
+                        image.at<ushort>((int)uv.y, (int)uv.x+j) = depth;
+                        image.at<ushort>((int)uv.y+j, (int)uv.x+j) = depth;
+                    }
+                }
              }
         }
 
-//        // Scale values to max for visualization
-//        int scale = 65535/max;
-//        image *= scale;
+        // Scale values to max for visualization
+        if(visualize){
+            int scale = 65535/max;
+            image *= scale;
+        }
 
         // Convert to ROS data type, copy the header from cloud_msg
         std_msgs::Header header = cam_info-> header;
@@ -213,6 +220,11 @@ public:
         // Create a ROS publisher for the output depth image
         image_transport::ImageTransport it(nh);
         pub_ = it.advertise("/depth_image", 1);
+
+        // Flag whether to enhance visualization
+        nh.param("visualize", visualize, false);
+        if(visualize)
+            printf("Visualization mode on\n");
 
         printf ("Node ready\n");
     }
