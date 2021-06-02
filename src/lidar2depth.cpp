@@ -3,6 +3,11 @@
 // Messages
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+
+#include "std_msgs/String.h"
+#include <math.h>
+#define PI 3.14159265
 
 // PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
@@ -11,6 +16,7 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/cloud_iterator.h>
+#include <pcl/visualization/common/shapes.h>
 
 // Camera Model
 #include <image_geometry/pinhole_camera_model.h>
@@ -50,9 +56,45 @@ Converts vector to depth measurement by calculating magnitude and scaling by 256
 */
 ushort depthFromVec(cv::Point3d xyz){
     float mag = sqrt(xyz.x*xyz.x + xyz.y*xyz.y + xyz.z*xyz.z);
+//    printf("Mag: %2.2f\n", mag);
     ushort pixel_val = (ushort)(mag*256.0);
     return pixel_val;
 }
+
+/**
+Returns a spherical point cloud for testing purposes
+@param samples How many points in point cloud
+@param center The center of the sphere
+@param radius The radius of the sphere
+@return PointCloud::Ptr
+*/
+PointCloud::Ptr fibonacci_sphere(int samples, cv::Point3d center, double radius){
+    PointCloud::Ptr cloud(new PointCloud());
+    cloud->width  = samples;
+    cloud->height = 1;
+    cloud->points.resize (cloud->width * cloud->height);
+
+    double phi = PI * (3. - sqrt(5.)); //# golden angle in radians
+
+    double i = 0.0;
+    for (auto& point: *cloud)
+      {
+        double  y = 1.0 - (i / (float)(samples - 1)) * 2.0; //  y goes from 1 to -1
+        double  y_radius = sqrt(1.0 - y * y) * radius ; // radius at y
+        double theta = phi * i; // golden angle increment
+
+        double x = cos(theta) * y_radius;
+        double z = sin(theta) * y_radius;
+
+        point.x = x + center.x;
+        point.y = y + center.y;
+        point.z = z + center.z;
+        i++;
+      }
+
+    return cloud;
+}
+
 
 /**
 * Convert Lidar 3D point cloud to depth map with same image plane as camera
@@ -62,113 +104,115 @@ ushort depthFromVec(cv::Point3d xyz){
 */
 class Lidar2Depth
 {
-    ros::NodeHandle nh_;
-
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
-    TimeSynchronizer<PointCloud2, CameraInfo> sync_;
-    message_filters::Subscriber<PointCloud2> lidar_sub;
-    message_filters::Subscriber<CameraInfo> info_sub;
-
     image_transport::Publisher pub_;
-    std::string target_frame_;
 
-
+public:
     /**
     * cloud_callback is called for each incoming point cloud message. It transforms the point cloud
     * to camera coordinates, and then projects the points on an image plane using a pinhole camera model
     * The value of each projected point is the distance from the point to the image plane producing
     * a depth map. The depth map is then published as a new message.
+    *
+    * @param cloud_msg The point cloud message
+    * @param cam_info The camera info for the camera plane which the point cloud should be transformed to.
+    *                   Needs to have an "optical" tf!
     */
     void cloud_callback (const PointCloud2::ConstPtr& cloud_msg,
                          const CameraInfoConstPtr& cam_info)
     {
-        printf ("Cloud: width = %d, height = %d\n", cloud_msg->width, cloud_msg->height);
-        printf ("Camera: width = %d, height = %d\n", cam_info->width, cam_info->height);
 
-        // Camera Model
+//      Camera Model
         image_geometry::PinholeCameraModel cam_model;
         cam_model.fromCameraInfo(cam_info);
 
-//        //Transform the point cloud into camera coordinates
-//        geometry_msgs::TransformStamped transform;
-//        sensor_msgs::PointCloud2 cloud_msg_world;
-//        try
-//        {
-//            transform = tf_buffer_.lookupTransform(
-//                target_frame_,
-//                cloud_msg->header.frame_id,
-//                cloud_msg->header.stamp);
-//            tf2::doTransform(*cloud_msg, cloud_msg_world, transform);
-//        }
-//        catch (tf2::TransformException& ex)
-//        {
-//            ROS_WARN("%s", ex.what());
-//            return;
-//        }
+        //Transform the point cloud into camera coordinates
+        geometry_msgs::TransformStamped transform;
+        sensor_msgs::PointCloud2 cloud_msg_world;
+        try
+        {
+            transform = tf_buffer_.lookupTransform(
+                cam_info->header.frame_id,
+                cloud_msg->header.frame_id,
+                cloud_msg->header.stamp);
+            tf2::doTransform(*cloud_msg, cloud_msg_world, transform);
+        }
+        catch (tf2::TransformException& ex)
+        {
+            ROS_WARN("%s", ex.what());
+            return;
+        }
+
+        // Convert to PCL data type
+        pcl::PCLPointCloud2 cloud2;
+        pcl_conversions::toPCL(cloud_msg_world, cloud2);
+        PointCloud::Ptr cloud(new PointCloud());
+
+//      // Spherical point cloud for debugging
+//        cv::Point3d center(2.0, 2.0, 5.0);
+//        PointCloud::Ptr cloud = fibonacci_sphere(1000, center, 1.0);
 //
-//        // Convert to PCL data type
-//        pcl::PCLPointCloud2 cloud2;
-//        pcl_conversions::toPCL(cloud_msg_world, cloud2);
-//        PointCloud::Ptr cloud(new PointCloud);
-//        pcl::fromPCLPointCloud2(cloud2, *cloud);
-//
-//        // Filter points in front of camera
-//        PointCloud cloud_filtered;
-//        pcl::PassThrough<pcl::PointXYZ> filter;
-//        filter.setInputCloud(cloud);
-//        filter.setFilterFieldName("x");
-//        filter.setFilterLimits(0.0, 6.0);
-//        filter.filter(cloud_filtered); // x is between 0-6
-//
-//        PointCloud::Ptr cloud_filtered_ptr(&cloud_filtered);
-//        filter.setInputCloud(cloud_filtered_ptr);
-//        filter.setFilterFieldName("y");
-//        filter.filter(cloud_filtered); //x and y are between 0-6
-//
-//        // 1. Project each point into image plane
-//        // 2. Map distance from image plane to pixel value
-//        // 3. Reshape into image matrix
-//        int rows = 600;
-//        int cols = 800;
-//        cv::Mat image = cv::Mat::zeros(rows, cols, CV_16UC1);
-//        for(PointCloud::iterator it = cloud_filtered.begin(); it != cloud_filtered.end(); it++){
-//             cv::Point3d xyz;
-//             xyz.x = it->x;
-//             xyz.y = it->y;
-//             xyz.z = it->z;
-//             cv::Point2d uv = cam_model.project3dToPixel(xyz);
-//             image.at<ushort>((int)uv.x, (int)uv.y) = depthFromVec(xyz);
-//        }
-//
-//        // Convert to ROS data type, copy the header from cloud_msg
-//        std_msgs::Header header = cloud_msg -> header;
-//        sensor_msgs::ImagePtr output = cv_bridge::CvImage(header, "mono16", image).toImageMsg();
-//
-//        // Publish the data
-//        pub_.publish (output);
+        pcl::fromPCLPointCloud2(cloud2, *cloud);
+
+        // Filter points in front of camera
+        PointCloud::Ptr cloud_filtered(new PointCloud);
+        pcl::PassThrough<pcl::PointXYZ> filter;
+        filter.setInputCloud(cloud);
+        filter.setFilterFieldName("z");
+        filter.setFilterLimits(0.0, DBL_MAX);
+        filter.filter(*cloud_filtered); // z is > 0
+
+        // 1. Project each point into image plane
+        // 2. Map distance from image plane to pixel value
+        // 3. Reshape into image matrix
+        int rows = cam_info->height;
+        int cols =  cam_info->width;
+        cv::Mat image = cv::Mat::zeros(rows, cols, CV_16UC1);
+
+        int max =0;
+        for(auto& point: *cloud_filtered){
+             cv::Point3d xyz(point.x, point.y, point.z);
+             cv::Point2d uv = cam_model.project3dToPixel(xyz);
+             if (uv.x >= 1 && uv.x < cols-1 && uv.y < rows-1 && uv.y >= 1){
+                int depth = depthFromVec(xyz);
+                if(depth > max) max = depth;
+
+                image.at<ushort>((int)uv.y, (int)uv.x) = depth;
+//                //Make lidar points bigger for visualization
+//                for(int j=-1; j<2; j++){
+//                    image.at<ushort>((int)uv.y+j, (int)uv.x) = depth;
+//                    image.at<ushort>((int)uv.y, (int)uv.x+j) = depth;
+//                    image.at<ushort>((int)uv.y+j, (int)uv.x+j) = depth;
+//                }
+             }
+        }
+
+//        // Scale values to max for visualization
+//        int scale = 65535/max;
+//        image *= scale;
+
+        // Convert to ROS data type, copy the header from cloud_msg
+        std_msgs::Header header = cam_info-> header;
+        sensor_msgs::ImagePtr output = cv_bridge::CvImage(header, "mono16", image).toImageMsg();
+
+        // Publish the data
+        pub_.publish (output);
     }
 
-public:
     /** Constructor
     @param camera_info message containing camera intrinsics
     @param target_frame string name of output coordinate frame
     */
-    Lidar2Depth(std::string target_frame)
-        : tf_listener_(tf_buffer_), sync_(lidar_sub, info_sub, 10)
+    Lidar2Depth(ros::NodeHandle nh)
+        : tf_listener_(tf_buffer_)
     {
-        target_frame_ = target_frame;
-
-        // Subscribe to the lidar point cloud and camera_info topics
-        lidar_sub.subscribe(nh_, "/X1/points", 1);
-        info_sub.subscribe(nh_, "/X1/front/image_raw", 1);
-
-        sync_.registerCallback(boost::bind(&Lidar2Depth::cloud_callback, this, _1, _2));
+        printf("Constructing node\n");
 
         // Create a ROS publisher for the output depth image
-        image_transport::ImageTransport it(nh_);
-        pub_ = it.advertise("depth_image", 1);
+        image_transport::ImageTransport it(nh);
+        pub_ = it.advertise("/depth_image", 1);
 
         printf ("Node ready\n");
     }
@@ -176,12 +220,18 @@ public:
 
 int main (int argc, char** argv)
 {
-    // Initialize ROS
-    ros::init (argc, argv, "lidar2depth_node");
+  ros::init(argc, argv, "lidar2depth_node");
 
-    // Construct class instance
-    Lidar2Depth l2d("");
+  ros::NodeHandle nh;
 
-    // Spin
-    ros::spin ();
+  message_filters::Subscriber<PointCloud2> image_sub(nh, "/points", 1);
+  message_filters::Subscriber<CameraInfo> info_sub(nh, "/camera_info", 1);
+  TimeSynchronizer<PointCloud2, CameraInfo> sync(image_sub, info_sub, 10);
+
+  Lidar2Depth x(nh);
+  sync.registerCallback(boost::bind(&Lidar2Depth::cloud_callback, &x, _1, _2));
+
+  ros::spin();
+
+  return 0;
 }
