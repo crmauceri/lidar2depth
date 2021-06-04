@@ -206,11 +206,3 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-
-catkin_install_python(PROGRAMS scripts/talker.py scripts/listener.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-add_executable(vision_node src/syncronizer.cpp)
-target_link_libraries(vision_node ${catkin_LIBRARIES})
-add_dependencies(vision_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
