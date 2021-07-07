@@ -30,6 +30,9 @@
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <geometry_msgs/TransformStamped.h>
 
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 using namespace sensor_msgs;
@@ -55,6 +58,7 @@ float absDepthFromVec(cv::Point3d xyz){
 */
 class ObjectInView
 {
+    int count;
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
@@ -69,7 +73,7 @@ public:
     * @param cam_info The camera info for the camera plane which the objects should be transformed to.
     *                   Needs to have an "optical" tf!
     */
-    void callback (const CameraInfoConstPtr& cam_info)
+    void callback (const sensor_msgs::ImageConstPtr& image, const sensor_msgs::CameraInfoConstPtr& cam_info)
     {
         //Transform the point cloud into camera coordinates
         geometry_msgs::TransformStamped transform_msg;
@@ -120,6 +124,7 @@ public:
         cam_model.fromCameraInfo(cam_info);
         int rows = cam_info->height;
         int cols =  cam_info->width;
+        bool written = false;
         for(auto& point: *cloud_filtered){
              cv::Point3d xyz(point.x, point.y, point.z);
              cv::Point2d uv = cam_model.project3dToPixel(xyz);
@@ -130,9 +135,28 @@ public:
                     // Write location of localization point in camera space to file
                     printf("%0.6f %d %d\n", cam_info->header.stamp.toSec(), int(uv.x), int(uv.y));
                     fprintf(out_f, "%0.6f %d %d\n", cam_info->header.stamp.toSec(), int(uv.x), int(uv.y))   ;
+
+                    if (!written)
+                        written = this.writeImage(image, cam_info->header.stamp.toSec());
+
                 }
              }
         }
+    }
+
+    bool writeImage(const sensor_msgs::ImageConstPtr& image_msg, float timeStamp){
+        cv_bridge::CvImagePtr cv_ptr;
+        try{
+            cv_ptr = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
+        }catch (cv_bridge::Exception& e){
+            ROS_ERROR("cv_bridge exception: %s", e.what());
+            return;
+        }
+
+        // Save as png image
+        std::string filepath = std::format("img{:.2f}.png", timeStamp);
+        cv::imwrite( filepath, cv_ptr->image )
+        printf("Saved %s\n", filepath)
     }
 
     /** Constructor
@@ -143,6 +167,7 @@ public:
         : tf_listener_(tf_buffer_)
     {
         printf("Constructing node\n");
+        count = 0;
 
         out_f = fopen ("output.csv" , "w");
         if (out_f == NULL) perror ("Error opening file");
@@ -193,7 +218,10 @@ int main (int argc, char** argv)
 
   ObjectInView x(nh, "/home/ohrad/subt_reference_datasets/data/tunnel/GT/gt_sr_B.csv");
 
-  ros::Subscriber info_sub =nh.subscribe("/chinook/multisense/left/camera_info", 1000, &ObjectInView::callback, &x);
+  image_transport::ImageTransport it(nh);
+  image_transport::CameraSubscriber sub = image_transport_.subscribeCamera("/chinook/multisense/left/", 10, &ObjectInView::callback, &x);
+  it.subscribe("/chinook/multisense/left/", 1, imageCallback);
+
   ros::spin();
 
   return 0;
