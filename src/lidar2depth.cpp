@@ -125,6 +125,7 @@ public:
     void cloud_callback (const PointCloud2::ConstPtr& cloud_msg,
                          const CameraInfoConstPtr& cam_info)
     {
+        std::cout << "Start callback" << std::endl;
 
 //      Camera Model
         image_geometry::PinholeCameraModel cam_model;
@@ -238,7 +239,7 @@ int main (int argc, char** argv)
 
   message_filters::Subscriber<PointCloud2> image_sub(nh, "/points", 1);
   message_filters::Subscriber<CameraInfo> info_sub(nh, "/camera_info", 1);
-  TimeSynchronizer<PointCloud2, CameraInfo> sync(image_sub, info_sub, 10);
+  TimeSynchronizer<PointCloud2, CameraInfo> sync(image_sub, info_sub, 100);
 
   Lidar2Depth x(nh);
   sync.registerCallback(boost::bind(&Lidar2Depth::cloud_callback, &x, _1, _2));

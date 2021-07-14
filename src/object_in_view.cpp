@@ -81,7 +81,7 @@ public:
     */
     void callback (const sensor_msgs::ImageConstPtr& image, const sensor_msgs::CameraInfoConstPtr& cam_info)
     {
-//        std::cout << "Start callback" << std::endl;
+        std::cout << "Start callback" << std::endl;
         //Transform the point cloud into camera coordinates
         geometry_msgs::TransformStamped transform_msg;
         PointCloud::Ptr cloud_camera(new PointCloud);
@@ -91,7 +91,7 @@ public:
             std::string err;
             if(tf_buffer_.canTransform(cam_info->header.frame_id, "chinook/odom",
                               cam_info->header.stamp, ros::Duration(0.1), &err)){
-//                std::cout << cam_info->header.frame_id << std::endl;
+                 std::cout << cam_info->header.frame_id << std::endl;
                 transform_msg = tf_buffer_.lookupTransform(
                     cam_info->header.frame_id,
                     "chinook/odom",
@@ -106,6 +106,9 @@ public:
             return;
         }
 
+//        printf("Transform: %0.2f %0.2f %0.2f\n", transform_msg.transform.translation.x,
+//         transform_msg.transform.translation.y, transform_msg.transform.translation.z);
+
 //      Camera Model
         image_geometry::PinholeCameraModel cam_model;
         cam_model.fromCameraInfo(cam_info);
@@ -119,14 +122,14 @@ public:
 
              geometry_msgs::Point point_msg_camera, point_msg;
              tf2::toMsg(point, point_msg);
-//             printf("Point tf2: %0.2f %0.2f %0.2f\n", point_msg.x, point_msg.y, point_msg.z);
+             printf("Point tf2: %0.2f %0.2f %0.2f\n", point_msg.x, point_msg.y, point_msg.z);
              tf2::doTransform(point_msg, point_msg_camera, transform_msg);
 
-//             printf("Point tf2: %0.2f %0.2f %0.2f\n", point_msg_camera.x, point_msg_camera.y, point_msg_camera.z);
+             printf("Point tf2: %0.2f %0.2f %0.2f\n", point_msg_camera.x, point_msg_camera.y, point_msg_camera.z);
              cv::Point3d xyz(point_msg_camera.x, point_msg_camera.y, point_msg_camera.z);
-//              printf("Point cv: %0.2f %0.2f %0.2f\n", xyz.x, xyz.y, xyz.z);
+              printf("Point cv: %0.2f %0.2f %0.2f\n", xyz.x, xyz.y, xyz.z);
              cv::Point2d uv = cam_model.unrectifyPoint(cam_model.project3dToPixel(xyz));
-//             printf("Point proj: %0.2f %0.2f\n", uv.x, uv.y);
+             printf("Point proj: %0.2f %0.2f\n", uv.x, uv.y);
              if (uv.x >= 1 && uv.x < cols-1 && uv.y < rows-1 && uv.y >= 1 && xyz.z > 0){
                 double depth = absDepthFromVec(xyz);
                 if(depth < 10.0) {
@@ -135,14 +138,19 @@ public:
                     // Object is less than 10 meters away in FOV
                     // Write location of localization point in camera space to file
                     double timeStamp = cam_info->header.stamp.toSec();
-                    printf("%s %0.6f %d %d %f\n", name.c_str(), timeStamp, int(uv.x), int(uv.y), depth);
+                    printf("%s\t%0.2f\t%0.2f\t%0.2f\t%0.6f\t%d\t%d\n", name.c_str(),
+                                point_msg.x, point_msg.y, point_msg.z,
+                                timeStamp, int(uv.x), int(uv.y))   ;
+                    printf("Transform: %0.2f %0.2f %0.2f\n", transform_msg.transform.translation.x,
+                        transform_msg.transform.translation.y, transform_msg.transform.translation.z);
+
 //                     fprintf(out_f, "object\tworld_x\tworld_y\tworld_z\ttimestamp\tcam_x\tcam_y\n")   ;
                     fprintf(out_f, "%s\t%0.2f\t%0.2f\t%0.2f\t%0.6f\t%d\t%d\n", name.c_str(),
                                 point_msg.x, point_msg.y, point_msg.z,
                                 timeStamp, int(uv.x), int(uv.y))   ;
 
-                    if (!written)
-                        written = this->writeImage(image, timeStamp);
+//                    if (!written)
+//                        written = this->writeImage(image, timeStamp);
 
                 }
              }
@@ -228,7 +236,7 @@ int main (int argc, char** argv)
 
   ros::NodeHandle nh;
 
-  ObjectInView x(nh, "/home/ohrad/subt_reference_datasets/data/tunnel/GT/gt_sr_B.csv");
+  ObjectInView x(nh, "/home/ohrad/subt_reference_datasets/data/tunnel/GT/test.csv");
 
   image_transport::ImageTransport it(nh);
   image_transport::TransportHints hints("compressed");
