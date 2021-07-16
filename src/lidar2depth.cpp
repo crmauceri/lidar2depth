@@ -38,6 +38,8 @@ typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 using namespace sensor_msgs;
 using namespace message_filters;
 
+typedef sync_policies::ApproximateTime<PointCloud2, CameraInfo> CloudCameraSyncPolicy;
+
 // How the depth map is encoded in KITTI data:
 // Depth maps (annotated and raw Velodyne scans) are saved as uint16 PNG images,
 // which can be opened with either MATLAB, libpng++ or the latest version of
@@ -239,7 +241,9 @@ int main (int argc, char** argv)
 
   message_filters::Subscriber<PointCloud2> image_sub(nh, "/points", 1);
   message_filters::Subscriber<CameraInfo> info_sub(nh, "/camera_info", 1);
-  TimeSynchronizer<PointCloud2, CameraInfo> sync(image_sub, info_sub, 100);
+  //TimeSynchronizer<PointCloud2, CameraInfo> sync(image_sub, info_sub, 100);
+
+  Synchronizer<CloudCameraSyncPolicy> sync(CloudCameraSyncPolicy(10), image_sub, info_sub);
 
   Lidar2Depth x(nh);
   sync.registerCallback(boost::bind(&Lidar2Depth::cloud_callback, &x, _1, _2));
