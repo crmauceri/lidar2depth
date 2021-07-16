@@ -1,0 +1,28 @@
+<launch>
+ <param name="save_root" value="/home/ohrad/subt_reference_datasets/data/tunnel/sr_B_route2/imgs/"/>
+  <node pkg="rosbag" type="play" name="rosbag" required="true" args="--pause --clock /home/ohrad/subt_reference_datasets/data/tunnel/sr_B_route2.bag"/>
+  <node pkg="lidar2depth" name="lidar2depth" type="lidar2depth_node" required="true" output="screen">
+    <remap to="/chinook/ouster/points" from="points"/>
+    <remap to="/chinook/multisense/left/image_rect_color/camera_info/" from="camera_info"/>
+  </node>
+  <node pkg="ip_basic" name="ip_basic" type="listener.py" required="true" output="screen"/>
+  <node pkg="ip_basic" name="write_depth" type="mono16pngwriter.py" respawn="false" required="true" output="screen" cwd="ROS_HOME">
+    <remap from="image" to="/completed_depth"/>
+    <param name="filename_format" value="comp_depth%s.png"/>
+  </node>
+  <node pkg="ip_basic" name="write_lidar" type="mono16pngwriter.py" respawn="false" required="true" output="screen" cwd="ROS_HOME">
+    <remap from="image" to="/depth_image"/>
+    <param name="filename_format" value="lidar%s.png"/>
+  </node>
+  <node pkg="ip_basic" name="write_stereo" type="mono16pngwriter.py" respawn="false" required="true" output="screen" cwd="ROS_HOME">
+    <remap from="image" to="/chinook/multisense/depth/compressedDepth"/>
+    <param name="filename_format" value="stereo_depth%s.png"/>
+    <param name="compressed" value="true"/>
+  </node>
+  <node pkg="ip_basic" name="write_img" type="pngwriter.py" respawn="false" required="true" output="screen" cwd="ROS_HOME">
+    <remap from="image" to="/chinook/multisense/left/image_rect_color/compressed"/>
+    <param name="filename_format" value="rgb%s.png"/>
+    <param name="compressed" value="true"/>
+  </node>
+</launch>
+
