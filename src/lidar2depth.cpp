@@ -127,7 +127,7 @@ public:
     void cloud_callback (const PointCloud2::ConstPtr& cloud_msg,
                          const CameraInfoConstPtr& cam_info)
     {
-        std::cout << "Start callback" << std::endl;
+//        std::cout << "Start callback" << std::endl;
 
 //      Camera Model
         image_geometry::PinholeCameraModel cam_model;

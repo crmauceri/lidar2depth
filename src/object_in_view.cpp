@@ -81,7 +81,7 @@ public:
     */
     void callback (const sensor_msgs::ImageConstPtr& image, const sensor_msgs::CameraInfoConstPtr& cam_info)
     {
-        std::cout << "Start callback" << std::endl;
+//        std::cout << "Start callback" << std::endl;
         //Transform the point cloud into camera coordinates
         geometry_msgs::TransformStamped transform_msg;
         PointCloud::Ptr cloud_camera(new PointCloud);
