@@ -1,6 +1,13 @@
 # lidar2depth
 A ROS node to convert lidar point cloud bag to depth image
 
+## Dependancies
+
+Tested with [ros-melodic](http://wiki.ros.org/melodic/Installation). (11/18/2021 I wanted to try noetic, but it looks like `ros_pcl` has not been updated for noetic yet)
+You'll need to install `tf2_sensor_msgs` with `sudo apt-get install ros-melodic-geometry2`   
+
+## Running
+
 Example use:
 ```
 rosrun lidar2depth lidar2depth_node points:=/X1/points/ camera_info:=/X1/front/optical/camera_info
