@@ -1,0 +1,15 @@
+save_root: '/home/jpldev/Datasets/Rellis_3D_unzip/Rellis-3D/imgs/'
+subscribe_to: [
+  {pub: '/nerian/left/image_rect_color/compressed',
+  format: 'BGR',
+  type: 'CompressedImage',
+  format_string: "%s_left.png"},
+  {pub: '/nerian/right/image_rect_color/compressed',
+  format: 'BGR',
+  type: 'CompressedImage',
+  format_string: "%s_right.png"},
+  {pub: /depth_image,
+  format: 'mono16',
+  type: 'Image',
+  format_string: "%s_lidar.png"},
+]

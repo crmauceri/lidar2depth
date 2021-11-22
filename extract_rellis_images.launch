@@ -1,0 +1,26 @@
+<launch>
+  <node ns="nerian" name="stereo_image_proc" pkg="stereo_image_proc" type="stereo_image_proc" required="true" output="screen"/> -->
+  <node pkg="lidar2depth" name="lidar2depth" type="lidar2depth_node" required="true" output="screen">
+    <remap to="/os1_cloud_node/points" from="points"/>
+    <remap to="/nerian/left/camera_info_mono" from="camera_info"/>
+  </node>
+  <rosparam command="load" file="params.yaml" />
+  <node pkg="ip_basic" name="write_pairs" type="synchronized_writer.py" respawn="false" required="true" output="screen" cwd="ROS_HOME">
+  </node>
+</launch>
+
+<!--
+Launch file for syncronizing and projecting depth maps for RELLIS 3D
+https://unmannedlab.github.io/research/RELLIS-3D
+
+In addition to using this launch file, run 
+`` 
+cd RELLIS-3D/utils
+python stereo_camerainfo_pub.py
+``   
+
+Then start the bag playback
+``
+rosbag play "/home/jpldev/Datasets/Rellis_3D_unzip/Rellis-3D/example_filtered.bag" /nerian/left/camera_info:=/nerian/left/camera_info_mono /nerian/right/camera_info:=/nerian/right/camera_info_mono --pause
+``
+-->
