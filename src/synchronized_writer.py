@@ -48,7 +48,7 @@ class SynchronizedWriter:
         self.log.writerow(headers)
 
         rospy.loginfo(subs)
-        ts = message_filters.ApproximateTimeSynchronizer(subs, 10, 0.5)
+        ts = message_filters.TimeSynchronizer(subs, 10)
         ts.registerCallback(self.callback)
         rospy.loginfo("Writer initialized")
 
@@ -91,8 +91,8 @@ class SynchronizedWriter:
                 rospy.logerror(e)
                 return
 
-        # if sub_params['format'] == 'BGR':
-        #     cv2.cvtColor(cv_image, cv_image, cv2.COLOR_BGR2RGB)
+        if sub_params['format'] == 'BGR':
+            cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB, cv_image)
         return cv_image
 
     def mono_16_convert(self, img_msg, sub_params):

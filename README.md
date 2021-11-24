@@ -26,6 +26,34 @@ The camera_info topic must contain an optical frame, that is,
 
 Otherwise the transforms for projecting the pointcloud into the image plane will be incorrectly oriented.
 
+### Launch files 
+
+#### extract_rellis_images.launch
+
+Launch file for syncronizing and projecting depth maps for RELLIS 3D
+https://unmannedlab.github.io/research/RELLIS-3D
+
+1. Set params in `rellis_params.yaml`
+
+2. Start launch file
+
+```
+roslaunch extract_rellis_images.launch
+```
+
+3. Run 
+
+``` 
+cd RELLIS-3D/utils
+python stereo_camerainfo_pub.py
+`` `  
+
+4. Then start the bag playback
+
+```
+rosbag play "/home/jpldev/Datasets/Rellis_3D_unzip/Rellis-3D/example_filtered.bag" /nerian/left/camera_info:=/nerian/left/camera_info_mono /nerian/right/camera_info:=/nerian/right/camera_info_mono --pause
+```
+
 ## Depth encoding
 The depth values of the image use the same encoding as the KITTI dataset
 
