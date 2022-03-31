@@ -175,7 +175,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
-catkin_install_python(PROGRAMS scripts/synchronizedwriter.py
+catkin_install_python(PROGRAMS src/synchronized_writer.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
